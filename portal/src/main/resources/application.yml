@@ -1,0 +1,69 @@
+server:
+  port: 8081
+spring:
+  # aop config
+  application:
+    name: portal
+  aop:
+    proxy-target-class: true
+  # datasource config
+  datasource:
+    hikari:
+      auto-commit: true
+      connection-test-query: SELECT 1
+      connection-timeout: 30000
+      driver-class-name: com.mysql.jdbc.Driver
+      idle-timeout: 60000
+      jdbc-url: jdbc:mysql://127.0.0.1:3306/seckill?autoReconnect=true&useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
+      max-lifetime: 1800000
+      maximum-pool-size: 15
+      minimum-idle: 5
+      password: 123456
+      pool-name: DatebookHikariCP
+      username: root
+  # 下面是统一处理错误
+  mvc:
+    # 错误时会抛出异常
+    throw-exception-if-no-handler-found: true
+  resources:
+    # 不要为我们工程中的资源文件建立映射
+    add-mappings: false
+  # redis config
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password:
+    timeout: 20000
+    ttl: 300
+    cache-null-values: true
+
+  #定义返回的日期数据格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    #设置空如何序列化
+    defaultPropertyInclusion: NON_NULL
+
+# mybatis-plus 设置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    # 数据库相关配置
+    db-config:
+      #主键类型  AUTO:"数据库ID自增", INPUT:"用户输入ID",ID_WORKER:"全局唯一ID (数字类型唯一ID)", UUID:"全局唯一ID UUID";
+      id-type: AUTO
+
+# 分页插件PageHelper配置
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  pageSizeZero: true
+  params: count=countSql
+rocketmq:
+  name-server: node1.com:9876;node2.com:9876
+  producer:
+    retry-next-server: true
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
+    group: pro_grp_seckill_order
