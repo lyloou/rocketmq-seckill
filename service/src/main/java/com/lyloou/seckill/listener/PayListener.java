@@ -2,6 +2,7 @@ package com.lyloou.seckill.listener;
 
 import cn.hutool.json.JSONUtil;
 import com.google.common.base.Strings;
+import com.lyloou.seckill.common.dto.Constant;
 import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.service.OrderManagerService;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +19,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RocketMQMessageListener(
-        topic = "tp_seckill_pay",
-        consumerGroup = "grp_seckill_pay",
+        topic = Constant.TOPIC_PAY,
+        consumerGroup = Constant.GROUP_PAY,
         consumeMode = ConsumeMode.CONCURRENTLY,
         messageModel = MessageModel.CLUSTERING,
         secretKey = "*"

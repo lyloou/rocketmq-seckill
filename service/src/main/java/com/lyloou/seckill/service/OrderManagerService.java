@@ -51,11 +51,13 @@ public class OrderManagerService {
         // 订单已经支付，不用操作
         final OrderEntity orderEntity = entity.get();
         if (Objects.equals(orderEntity.getOrderStatus(), OrderStatus.PAYED.name())) {
+            log.warn("支付已经支付过了：{}", orderEntity);
             return;
         }
 
         // 订单已经取消，不用操作
         if (Objects.equals(orderEntity.getOrderStatus(), OrderStatus.CANCEL.name())) {
+            log.warn("支付已经取消：{}", orderEntity);
             return;
         }
 

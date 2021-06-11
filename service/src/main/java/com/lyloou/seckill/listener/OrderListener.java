@@ -1,6 +1,7 @@
 package com.lyloou.seckill.listener;
 
 import cn.hutool.json.JSONUtil;
+import com.lyloou.seckill.common.dto.Constant;
 import com.lyloou.seckill.common.dto.OrderDTO;
 import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.common.dto.PayStatus;
@@ -24,8 +25,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RocketMQMessageListener(
-        topic = "tp_seckill_order",
-        consumerGroup = "grp_seckill_order",
+        topic = Constant.TOPIC_ORDER,
+        consumerGroup = Constant.GROUP_ORDER,
         consumeMode = ConsumeMode.CONCURRENTLY,
         messageModel = MessageModel.CLUSTERING,
         secretKey = "*"
@@ -53,7 +54,7 @@ public class OrderListener implements RocketMQListener<OrderDTO> {
         resultDTO.setPayStatus(PayStatus.CANCEL.name());
         final String str = JSONUtil.toJsonStr(resultDTO);
         log.info("发送消息：{}", str);
-        Message message = new Message("tp_seckill_pay", str.getBytes());
+        Message message = new Message(Constant.TOPIC_PAY, str.getBytes());
         rocketMQTemplate.asyncSend(message.getTopic(),
                 RocketMQUtil.convertToSpringMessage(message),
                 new SendCallback() {

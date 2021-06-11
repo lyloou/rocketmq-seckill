@@ -3,6 +3,7 @@ package com.lyloou.seckill.service;
 import cn.hutool.json.JSONUtil;
 import com.lyloou.component.redismanager.RedisService;
 import com.lyloou.seckill.common.config.IdGenerator;
+import com.lyloou.seckill.common.dto.Constant;
 import com.lyloou.seckill.common.dto.OrderDTO;
 import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.common.dto.PayStatus;
@@ -28,7 +29,7 @@ public class OrderApiService {
     OrderService orderService;
 
     @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private RocketMQTemplate mqTemplate;
 
     @Autowired
     RedisService redisService;
@@ -47,7 +48,7 @@ public class OrderApiService {
             return false;
         }
 
-        rocketMQTemplate.asyncSend("tp_seckill_order", order, new SendCallback() {
+        mqTemplate.asyncSend(Constant.TOPIC_ORDER, order, new SendCallback() {
             @Override
             public void onSuccess(SendResult sendResult) {
                 stockApiService.reduceStock(order.getProductId());
@@ -71,8 +72,8 @@ public class OrderApiService {
         final String str = JSONUtil.toJsonStr(resultDTO);
         log.info("发送消息：{}", str);
 
-        final org.springframework.messaging.Message message = RocketMQUtil.convertToSpringMessage(new Message("tp_seckill_pay", str.getBytes()));
-        rocketMQTemplate.asyncSend("tp_seckill_pay", message, new SendCallback() {
+        final Message message = new Message(Constant.TOPIC_PAY, str.getBytes());
+        mqTemplate.asyncSend(message.getTopic(), RocketMQUtil.convertToSpringMessage(message), new SendCallback() {
             @Override
             public void onSuccess(SendResult sendResult) {
                 log.info("发送支付信息，成功：{}", sendResult);
