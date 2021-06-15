@@ -19,7 +19,7 @@ public class OrderDTO extends DTO {
 
     private static final long serialVersionUID = 1L;
     @ApiModelProperty(value = "实体ID")
-    private Integer id;
+    private Long id;
 
 
     @ApiModelProperty(value = "订单序列号")

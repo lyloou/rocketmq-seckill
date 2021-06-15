@@ -27,7 +27,7 @@ public class StockApiService {
         return Optional.ofNullable(stock).map(Integer::valueOf).orElse(0);
     }
 
-    public void reduceStock(String productId) {
+    public void decrStock(String productId) {
         productId = "1";
         redisService.decr("product::" + productId);
     }

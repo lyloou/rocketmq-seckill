@@ -5,6 +5,7 @@ import com.lyloou.seckill.common.dto.OrderDTO;
 import com.lyloou.seckill.common.dto.OrderStatus;
 import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.service.OrderApiService;
+import com.lyloou.seckill.service.PayApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +19,8 @@ public class OrderApiController {
 
     @Autowired
     OrderApiService orderApiService;
+    @Autowired
+    PayApiService payApiService;
 
     @PostMapping("/order")
     public SingleResponse<String> order(OrderDTO order) {
@@ -28,7 +31,7 @@ public class OrderApiController {
 
     @PostMapping("/pay")
     public SingleResponse<String> pay(PayResultDTO payResultDTO) {
-        boolean result = orderApiService.pay(payResultDTO);
+        boolean result = payApiService.pay(payResultDTO);
         return SingleResponse.buildSuccess(result ? "success" : "fail");
     }
 }

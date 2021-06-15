@@ -15,8 +15,7 @@ import java.util.Date;
 /**
  * <p>基础实体</p>
  *
- * @author ganquan
- * @date 2020/12/14 17:10
+ * @author lilou
  */
 @Data
 @Accessors(chain = true)
@@ -26,7 +25,7 @@ public class BaseEntity implements Serializable {
 
     @TableId(type = IdType.AUTO)
     @ApiModelProperty(value = "实体ID")
-    private Integer id;
+    private Long id;
 
     @ApiModelProperty(value = "创建时间")
     @TableField(fill = FieldFill.INSERT)

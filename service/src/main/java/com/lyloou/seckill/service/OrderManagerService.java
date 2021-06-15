@@ -2,8 +2,6 @@ package com.lyloou.seckill.service;
 
 import com.google.common.base.Strings;
 import com.lyloou.component.redismanager.RedisService;
-import com.lyloou.seckill.common.convertor.OrderConvertor;
-import com.lyloou.seckill.common.dto.OrderDTO;
 import com.lyloou.seckill.common.dto.OrderStatus;
 import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.common.repository.entity.OrderEntity;
@@ -25,15 +23,10 @@ public class OrderManagerService {
 
     @Autowired
     OrderService orderService;
-    @Autowired
-    OrderConvertor convertor;
+
     @Autowired
     RedisService redisService;
 
-    public boolean insert(OrderDTO orderDTO) {
-        final OrderEntity orderEntity = convertor.convert(orderDTO);
-        return orderService.save(orderEntity);
-    }
 
     public void handle(PayResultDTO payResultDTO) {
         final String payNo = payResultDTO.getPayNo();
@@ -51,7 +44,7 @@ public class OrderManagerService {
         // 订单已经支付，不用操作
         final OrderEntity orderEntity = entity.get();
         if (Objects.equals(orderEntity.getOrderStatus(), OrderStatus.PAYED.name())) {
-            log.warn("支付已经支付过了：{}", orderEntity);
+            log.info("支付已经支付过了，无需操作：{}", orderEntity);
             return;
         }
 

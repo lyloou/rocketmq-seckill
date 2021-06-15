@@ -15,4 +15,8 @@ public class IdGenerator {
     public String nextIdStr() {
         return snowflake.nextIdStr();
     }
+
+    public long nextId() {
+        return snowflake.nextId();
+    }
 }

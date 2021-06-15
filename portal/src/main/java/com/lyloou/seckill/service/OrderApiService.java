@@ -1,21 +1,25 @@
 package com.lyloou.seckill.service;
 
 import cn.hutool.json.JSONUtil;
+import com.lyloou.component.exceptionhandler.exception.BizException;
 import com.lyloou.component.redismanager.RedisService;
 import com.lyloou.seckill.common.config.IdGenerator;
+import com.lyloou.seckill.common.convertor.OrderConvertor;
 import com.lyloou.seckill.common.dto.Constant;
 import com.lyloou.seckill.common.dto.OrderDTO;
-import com.lyloou.seckill.common.dto.PayResultDTO;
-import com.lyloou.seckill.common.dto.PayStatus;
+import com.lyloou.seckill.common.repository.entity.TransactionLogEntity;
 import com.lyloou.seckill.common.repository.service.OrderService;
+import com.lyloou.seckill.common.repository.service.TransactionLogService;
+import com.lyloou.seckill.mq.OrderTransactionProducer;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.client.producer.SendCallback;
-import org.apache.rocketmq.client.producer.SendResult;
-import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
-import org.apache.rocketmq.spring.support.RocketMQUtil;
+import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.LocalTransactionState;
+import org.apache.rocketmq.client.producer.TransactionSendResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 /**
  * @author lilou
@@ -29,7 +33,7 @@ public class OrderApiService {
     OrderService orderService;
 
     @Autowired
-    private RocketMQTemplate mqTemplate;
+    OrderConvertor convertor;
 
     @Autowired
     RedisService redisService;
@@ -40,50 +44,78 @@ public class OrderApiService {
     @Autowired
     StockApiService stockApiService;
 
-    public boolean order(OrderDTO order) {
-        final String orderNo = idGenerator.nextIdStr();
-        order.setOrderNo(orderNo);
-        Integer stock = stockApiService.getStock(order.getProductId());
-        if (stock <= 0) {
-            return false;
-        }
+    @Autowired
+    OrderTransactionProducer orderTransactionProducer;
 
-        mqTemplate.asyncSend(Constant.TOPIC_ORDER, order, new SendCallback() {
-            @Override
-            public void onSuccess(SendResult sendResult) {
-                stockApiService.reduceStock(order.getProductId());
-                log.info("下单成功，成功扣减库存，订单信息：{}", order);
+    @Autowired
+    TransactionLogService transactionLogService;
+
+    @Autowired
+    PayApiService payApiService;
+
+    /**
+     * 【下单】事务调用
+     * 执行本地事务时调用，将订单数据和事务日志写入数据库
+     *
+     * @param order
+     * @param transactionId
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void order(OrderDTO order, String transactionId) {
+        // redis 分布式锁
+        redisService.doWithLock("decr-stock::" + order.getProductId(), 3000, result -> {
+            // 检查库存
+            Integer stock = stockApiService.getStock(order.getProductId());
+            if (stock <= 0) {
+                throw new BizException("无库存");
             }
 
-            @Override
-            public void onException(Throwable e) {
-                log.warn("下单失败，订单信息：{}，异常信息：{}", order, e);
+            // 扣减库存
+            stockApiService.decrStock(order.getProductId());
+
+            // 创建订单
+            final boolean saveOrderResult = orderService.save(convertor.convert(order));
+            if (!saveOrderResult) {
+                throw new BizException("保存订单失败, transactionId:" + transactionId);
+            }
+
+            // 写入事务日志
+            transactionLogService.save(new TransactionLogEntity()
+                    .setId(transactionId)
+                    .setBusiness("order")
+                    .setForeignKey(String.valueOf(order.getId()))
+            );
+
+            payApiService.cancelPayIfTimeout(order.getOrderNo());
+
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         });
-        return true;
+
     }
 
-    public boolean pay(PayResultDTO payResultDTO) {
-        // 如果支付超时，则发送取消订单的消息
-        final PayResultDTO resultDTO = new PayResultDTO();
-        resultDTO.setOrderNo(payResultDTO.getOrderNo());
-        resultDTO.setPayNo(payResultDTO.getPayNo());
-        resultDTO.setPayStatus(PayStatus.PAYED.name());
-        final String str = JSONUtil.toJsonStr(resultDTO);
-        log.info("发送消息：{}", str);
-
-        final Message message = new Message(Constant.TOPIC_PAY, str.getBytes());
-        mqTemplate.asyncSend(message.getTopic(), RocketMQUtil.convertToSpringMessage(message), new SendCallback() {
-            @Override
-            public void onSuccess(SendResult sendResult) {
-                log.info("发送支付信息，成功：{}", sendResult);
+    /**
+     * 【下单】前端调用，只用于向 rocketMQ 发送事务half消息
+     */
+    public void order(OrderDTO order) {
+        order.setId(idGenerator.nextId());
+        order.setOrderNo(idGenerator.nextIdStr());
+        try {
+            log.debug("开始发送");
+            final TransactionSendResult sendResult = orderTransactionProducer.send(JSONUtil.toJsonStr(order), Constant.TOPIC_ORDER);
+            log.debug("发送完成");
+            if (Objects.equals(sendResult.getLocalTransactionState(), LocalTransactionState.COMMIT_MESSAGE)) {
+                log.info("事务执行成功：{}", sendResult);
+            } else {
+                log.warn("事务执行异常：{}", sendResult);
             }
-
-            @Override
-            public void onException(Throwable e) {
-                log.warn("发送支付信息，失败", e);
-            }
-        }, 3000, 3);
-        return true;
+        } catch (MQClientException e) {
+            throw new BizException("下订单失败", e);
+        }
     }
+
 }
