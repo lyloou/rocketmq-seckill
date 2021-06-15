@@ -14,8 +14,6 @@ import com.lyloou.seckill.mq.PayTransactionProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.LocalTransactionState;
-import org.apache.rocketmq.client.producer.SendResult;
-import org.apache.rocketmq.client.producer.SendStatus;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -92,19 +90,13 @@ public class PayApiService {
         resultDTO.setOrderNo(orderNo);
         resultDTO.setPayNo(null);
         resultDTO.setPayStatus(PayStatus.CANCEL.name());
-        final String str = JSONUtil.toJsonStr(resultDTO);
 
         try {
-            log.info("cancelPayIfTimeout 开始发送：{}", str);
-            final SendResult sendResult = payTransactionProducer.sendWithDelay(str, Constant.TOPIC_PAY, 10 * 1000L);
-            log.debug("cancelPayIfTimeout 发送完成");
-            if (Objects.equals(sendResult.getSendStatus(), SendStatus.SEND_OK)) {
-                log.info("cancelPayIfTimeout 事务执行成功：{}", sendResult.getTransactionId());
-            } else {
-                log.warn("cancelPayIfTimeout 事务执行异常：{}", sendResult);
-            }
+            final String str = JSONUtil.toJsonStr(resultDTO);
+            log.info("cancelPayIfTimeout 异步发送：{}", str);
+            payTransactionProducer.asyncSendWithDelayTimeLevel(str, Constant.TOPIC_PAY, 4);
         } catch (Exception e) {
-            throw new BizException("cancelPayIfTimeout 下订单失败", e);
+            throw new BizException("cancelPayIfTimeout 失败", e);
         }
     }
 }

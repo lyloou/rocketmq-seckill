@@ -1,7 +1,8 @@
 package com.lyloou.seckill.mq;
 
-import org.apache.rocketmq.client.exception.MQBrokerException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.TransactionMQProducer;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
@@ -20,6 +21,7 @@ import java.util.concurrent.ExecutorService;
  * @since 2021/6/15
  */
 @Component
+@Slf4j
 public class PayTransactionProducer {
     @Autowired
     private RocketMQProperties mqProperties;
@@ -57,10 +59,21 @@ public class PayTransactionProducer {
         return this.producer.sendMessageInTransaction(message, null);
     }
 
-    public SendResult sendWithDelay(String data, String topic, long delay) throws MQBrokerException, RemotingException, InterruptedException, MQClientException {
+    public void asyncSendWithDelayTimeLevel(String data, String topic, int delayTimeLevel)
+            throws RemotingException, InterruptedException, MQClientException {
         Message message = new Message(topic, data.getBytes());
-        message.setDelayTimeLevel(4);
-        return this.producer.send(message);
+        message.setDelayTimeLevel(delayTimeLevel);
+        this.producer.send(message, new SendCallback() {
+            @Override
+            public void onSuccess(SendResult sendResult) {
+                log.info("sendWithDelayAsync success, {}", sendResult);
+            }
+
+            @Override
+            public void onException(Throwable e) {
+                log.error("sendWithDelayAsync failed, ", e);
+            }
+        });
     }
 
 }

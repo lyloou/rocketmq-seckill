@@ -90,7 +90,7 @@ public class OrderApiService {
             payApiService.cancelPayIfTimeout(order.getOrderNo());
 
             try {
-                Thread.sleep(10000);
+                Thread.sleep(6000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
