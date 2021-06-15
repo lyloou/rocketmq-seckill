@@ -2,6 +2,7 @@ package com.lyloou.seckill.controller;
 
 import io.swagger.annotations.ApiOperation;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
@@ -16,15 +17,10 @@ public class PageController {
         return "order";
     }
 
-    @ApiOperation("等待支付页面")
-    @GetMapping("/watingpay")
-    public String watingpay() {
-        return "watingpay";
-    }
-
     @ApiOperation("调用支付")
     @GetMapping("/pay")
-    public String pay() {
+    public String pay(String orderNo, Model model) {
+        model.addAttribute("orderNo", orderNo);
         return "pay";
     }
 }

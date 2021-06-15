@@ -14,8 +14,8 @@
             data: "userId=u12345&content=hi.book&productId=12",
             cache: false,
             success: function (data) {
-                if (data.data === "success") {
-                    window.location.href = "/watingpay";
+                if (data.success) {
+                    window.location.href = "/pay?orderNo=" + data.data;
                 } else {
                     alert("抢购失败，请重试！")
                 }

@@ -22,8 +22,8 @@ public class OrderApiController {
     @PostMapping("/order")
     public SingleResponse<String> order(OrderDTO order) {
         order.setOrderStatus(OrderStatus.NEW.name());
-        boolean result = orderApiService.order(order);
-        return SingleResponse.buildSuccess(result ? "success" : "fail");
+        orderApiService.order(order);
+        return SingleResponse.buildSuccess(order.getOrderNo());
     }
 
     @PostMapping("/pay")
