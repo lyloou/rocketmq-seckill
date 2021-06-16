@@ -1,5 +1,6 @@
 package com.lyloou.seckill.service;
 
+import cn.hutool.core.thread.ThreadFactoryBuilder;
 import cn.hutool.json.JSONUtil;
 import com.lyloou.component.exceptionhandler.exception.BizException;
 import com.lyloou.component.redismanager.RedisService;
@@ -7,6 +8,8 @@ import com.lyloou.seckill.common.config.IdGenerator;
 import com.lyloou.seckill.common.convertor.OrderConvertor;
 import com.lyloou.seckill.common.dto.Constant;
 import com.lyloou.seckill.common.dto.OrderDTO;
+import com.lyloou.seckill.common.dto.OrderStatus;
+import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.common.repository.entity.TransactionLogEntity;
 import com.lyloou.seckill.common.repository.service.OrderService;
 import com.lyloou.seckill.common.repository.service.TransactionLogService;
@@ -20,6 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author lilou
@@ -132,6 +139,47 @@ public class OrderApiService {
         if (stock <= 0) {
             throw new BizException("商品" + productId + "无库存");
         }
+    }
+
+    private final int nThreads = Runtime.getRuntime().availableProcessors();
+    private final ExecutorService poolExecutor = new ThreadPoolExecutor(
+            nThreads,
+            nThreads,
+            0L,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(),
+            ThreadFactoryBuilder.create().build(),
+            new ThreadPoolExecutor.CallerRunsPolicy()
+    );
+
+
+    public void batchOrderPay() {
+        for (int i = 0; i < 100; i++) {
+            poolExecutor.submit(newOrderRunnable(i));
+
+        }
+    }
+
+    private Runnable newOrderRunnable(int i) {
+        return () -> {
+            try {
+
+                OrderDTO order = new OrderDTO();
+                order.setUserId("user-id:" + i);
+                order.setProductId("1");
+                order.setContent("content-" + i);
+                order.setOrderStatus(OrderStatus.NEW.name());
+                order(order);
+
+                PayResultDTO payResultDTO = new PayResultDTO();
+                payResultDTO.setOrderNo(order.getOrderNo());
+                payResultDTO.setPayNo("pay-no" + i);
+                final boolean result = payApiService.pay(payResultDTO);
+                log.info("第{}个，支付结果：{}", i, result);
+            } catch (Exception e) {
+                log.error("第{}个，异常：{}", i, e);
+            }
+        };
     }
 
 }
