@@ -45,18 +45,18 @@ public class PayApiService {
         checkOrderStatus(payResultDTO.getOrderNo());
 
         try {
-            log.info("pay 开始发送：{}", str);
+            log.debug("pay 开始发送：{}", str);
             final TransactionSendResult sendResult = payTransactionProducer.send(str, Constant.TOPIC_PAY);
             log.debug("pay 发送完成");
             if (Objects.equals(sendResult.getLocalTransactionState(), LocalTransactionState.COMMIT_MESSAGE)) {
-                log.info("pay 事务执行成功：{}", sendResult);
+                log.debug("pay 事务执行成功：{}", sendResult);
                 return true;
             } else {
                 log.warn("pay 事务执行异常：{}", sendResult);
-                return false;
+                throw new BizException("支付失败");
             }
         } catch (MQClientException e) {
-            throw new BizException("下订单失败", e);
+            throw new BizException("支付失败", e);
         }
     }
 

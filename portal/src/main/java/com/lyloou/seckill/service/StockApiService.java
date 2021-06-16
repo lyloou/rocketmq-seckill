@@ -31,4 +31,9 @@ public class StockApiService {
         productId = "1";
         redisService.decr("product::" + productId);
     }
+
+    public void incrStock(String productId) {
+        productId = "1";
+        redisService.decr("product::" + productId);
+    }
 }

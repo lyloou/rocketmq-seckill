@@ -56,7 +56,7 @@ public class OrderTransactionProducerListener implements TransactionListener {
                 .count() > 0) {
             state = LocalTransactionState.COMMIT_MESSAGE;
         } else {
-            state = LocalTransactionState.UNKNOW;
+            state = LocalTransactionState.ROLLBACK_MESSAGE;
         }
         log.debug("结束本地事务状态查询：{}", state);
         return state;

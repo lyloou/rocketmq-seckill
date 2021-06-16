@@ -66,10 +66,7 @@ public class OrderApiService {
         // redis 分布式锁
         redisService.doWithLock("decr-stock::" + order.getProductId(), 3000, result -> {
             // 检查库存
-            Integer stock = stockApiService.getStock(order.getProductId());
-            if (stock <= 0) {
-                throw new BizException("无库存");
-            }
+            checkStock(order.getProductId());
 
             // 扣减库存
             stockApiService.decrStock(order.getProductId());
@@ -106,6 +103,8 @@ public class OrderApiService {
      * 【下单】前端调用，只用于向 rocketMQ 发送事务half消息
      */
     public void order(OrderDTO order) {
+        checkStock(order.getProductId());
+
         order.setId(idGenerator.nextId());
         order.setOrderNo(idGenerator.nextIdStr());
         try {
@@ -113,12 +112,25 @@ public class OrderApiService {
             final TransactionSendResult sendResult = orderTransactionProducer.send(JSONUtil.toJsonStr(order), Constant.TOPIC_ORDER);
             log.debug("发送完成");
             if (Objects.equals(sendResult.getLocalTransactionState(), LocalTransactionState.COMMIT_MESSAGE)) {
-                log.info("事务执行成功：{}", sendResult);
+                log.debug("事务执行成功：{}", sendResult);
             } else {
                 log.warn("事务执行异常：{}", sendResult);
+                // 再次检查库存
+                checkStock(order.getProductId());
+
+                // 不是库存异常，抛出其他异常
+                throw new BizException("下单失败，其他异常");
             }
         } catch (MQClientException e) {
             throw new BizException("下订单失败", e);
+        }
+    }
+
+    private void checkStock(String productId) {
+        // 检查库存
+        Integer stock = stockApiService.getStock(productId);
+        if (stock <= 0) {
+            throw new BizException("商品" + productId + "无库存");
         }
     }
 
