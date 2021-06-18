@@ -71,7 +71,7 @@ public class OrderApiService {
     @Transactional(rollbackFor = Exception.class)
     public void order(OrderDTO order, String transactionId) {
         // redis 分布式锁
-        redisService.doWithLock("decr-stock::" + order.getProductId(), 3000, result -> {
+        redisService.doWithLock("decr-stock::" + order.getProductId(), 100000, result -> {
             // 检查库存
             checkStock(order.getProductId());
 
@@ -154,7 +154,7 @@ public class OrderApiService {
 
 
     public void batchOrderPay() {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             poolExecutor.submit(newOrderRunnable(i));
 
         }

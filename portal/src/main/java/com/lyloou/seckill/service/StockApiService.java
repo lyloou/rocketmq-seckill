@@ -18,7 +18,7 @@ public class StockApiService {
 
     @PostConstruct
     public void init() {
-        redisService.set("product::" + 1, String.valueOf(10));
+        redisService.set("product::" + 1, String.valueOf(100));
     }
 
     public Integer getStock(String productId) {
