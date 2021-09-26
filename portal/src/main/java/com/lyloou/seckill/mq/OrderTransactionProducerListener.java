@@ -1,6 +1,7 @@
 package com.lyloou.seckill.mq;
 
 import cn.hutool.json.JSONUtil;
+import com.lyloou.component.redismanager.RedisService;
 import com.lyloou.seckill.common.dto.OrderDTO;
 import com.lyloou.seckill.common.repository.entity.TransactionLogEntity;
 import com.lyloou.seckill.common.repository.service.TransactionLogService;
@@ -24,6 +25,9 @@ public class OrderTransactionProducerListener implements TransactionListener {
     OrderApiService orderApiService;
 
     @Autowired
+    RedisService redisService;
+
+    @Autowired
     TransactionLogService transactionLogService;
 
     @Override
@@ -34,7 +38,12 @@ public class OrderTransactionProducerListener implements TransactionListener {
         try {
             final String body = new String(msg.getBody());
             final OrderDTO order = JSONUtil.toBean(body, OrderDTO.class);
-            orderApiService.order(order, msg.getTransactionId());
+            // lock here start
+            // redis 分布式锁
+            redisService.doWithLock("decr-stock::" + order.getProductId(), 100000, result -> {
+                orderApiService.order(order, msg.getTransactionId());
+            });
+            // lock here end
 
             state = LocalTransactionState.COMMIT_MESSAGE;
             log.debug("本地事务已经提交. {}", msg.getTransactionId());

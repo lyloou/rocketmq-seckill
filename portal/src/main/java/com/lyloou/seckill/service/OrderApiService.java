@@ -70,31 +70,31 @@ public class OrderApiService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void order(OrderDTO order, String transactionId) {
-        // redis 分布式锁
-        redisService.doWithLock("decr-stock::" + order.getProductId(), 100000, result -> {
-            // 检查库存
-            checkStock(order.getProductId());
+        // redis 分布式锁，不能加在这里（因为【事务】在【锁】的外层，先执行事务，在加锁。正确的顺序应该是先【加锁】，再【执行事务】）
+        // redisService.doWithLock("decr-stock::" + order.getProductId(), 100000, result -> {
+        // 检查库存
+        checkStock(order.getProductId());
 
-            // 扣减库存
-            stockApiService.decrStock(order.getProductId());
+        // 扣减库存
+        stockApiService.decrStock(order.getProductId());
 
-            // 创建订单
-            final boolean saveOrderResult = orderService.save(convertor.convert(order));
-            if (!saveOrderResult) {
-                throw new BizException("保存订单失败, transactionId:" + transactionId);
-            }
+        // 创建订单
+        final boolean saveOrderResult = orderService.save(convertor.convert(order));
+        if (!saveOrderResult) {
+            throw new BizException("保存订单失败, transactionId:" + transactionId);
+        }
 
-            // 写入事务日志
-            transactionLogService.save(new TransactionLogEntity()
-                    .setId(transactionId)
-                    .setBusiness("order")
-                    .setForeignKey(String.valueOf(order.getId()))
-            );
+        // 写入事务日志
+        transactionLogService.save(new TransactionLogEntity()
+                .setId(transactionId)
+                .setBusiness("order")
+                .setForeignKey(String.valueOf(order.getId()))
+        );
 
-            payApiService.cancelPayIfTimeout(order.getOrderNo());
+        payApiService.cancelPayIfTimeout(order.getOrderNo());
 
-            // sleep();
-        });
+        // sleep();
+        // });
 
     }
 
