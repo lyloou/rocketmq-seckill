@@ -70,7 +70,7 @@ public class OrderApiService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void order(OrderDTO order, String transactionId) {
-        // redis 分布式锁，不能加在这里（因为【事务】在【锁】的外层，先执行事务，在加锁。正确的顺序应该是先【加锁】，再【执行事务】）
+        // redis 分布式锁，不能加在这里（因为【事务】在【锁】的外层，先执行了【事务】，再【加锁】。正确的顺序应该是先【加锁】，再【执行事务】）
         // redisService.doWithLock("decr-stock::" + order.getProductId(), 100000, result -> {
         // 检查库存
         checkStock(order.getProductId());
