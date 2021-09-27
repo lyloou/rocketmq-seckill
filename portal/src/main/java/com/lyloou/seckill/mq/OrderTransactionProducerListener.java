@@ -1,6 +1,7 @@
 package com.lyloou.seckill.mq;
 
 import cn.hutool.json.JSONUtil;
+import com.lyloou.component.exceptionhandler.exception.BizException;
 import com.lyloou.component.redismanager.RedisService;
 import com.lyloou.seckill.common.dto.OrderDTO;
 import com.lyloou.seckill.common.repository.entity.TransactionLogEntity;
@@ -35,17 +36,22 @@ public class OrderTransactionProducerListener implements TransactionListener {
         log.debug("开始执行本地事务......");
         LocalTransactionState state;
 
+        final String body = new String(msg.getBody());
+        final OrderDTO order = JSONUtil.toBean(body, OrderDTO.class);
+
         try {
-            final String body = new String(msg.getBody());
-            final OrderDTO order = JSONUtil.toBean(body, OrderDTO.class);
             // lock here start
             // redis 分布式锁
-            redisService.doWithLock("decr-stock::" + order.getProductId(), 100000, result -> {
-                orderApiService.order(order, msg.getTransactionId());
+            redisService.doWithLock("decr-stock::" + order.getProductId(), 3, locked -> {
+                if (locked) {
+                    orderApiService.order(order, msg.getTransactionId());
+                } else {
+                    throw new BizException("竞争太激烈了，请重新试试~");
+                }
             });
             // lock here end
-
             state = LocalTransactionState.COMMIT_MESSAGE;
+
             log.debug("本地事务已经提交. {}", msg.getTransactionId());
         } catch (Exception e) {
             log.warn("执行本地事务失败", e);

@@ -36,6 +36,10 @@ spring:
     timeout: 20000
     ttl: 300
     cache-null-values: true
+  redisson:
+    host: redis://127.0.0.1:6379
+    password:
+    connection-timeout: 5000
 
   #定义返回的日期数据格式
   jackson:
@@ -61,7 +65,7 @@ pagehelper:
   pageSizeZero: true
   params: count=countSql
 rocketmq:
-  name-server: node1.com:9876;node2.com:9876
+  name-server: node4.com:9876
   producer:
     retry-next-server: true
     retry-times-when-send-failed: 2

@@ -6,7 +6,7 @@
     <parent>
         <artifactId>component-parent</artifactId>
         <groupId>com.lyloou</groupId>
-        <version>1.0.12</version>
+        <version>1.0.14</version>
     </parent>
 
     <artifactId>practice-rocketmq-homework</artifactId>

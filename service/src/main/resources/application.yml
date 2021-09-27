@@ -62,7 +62,7 @@ pagehelper:
   params: count=countSql
 
 rocketmq:
-  name-server: node1.com:9876;node2.com:9876
+  name-server: node4.com:9876
   producer:
     retry-next-server: true
     retry-times-when-send-failed: 2
