@@ -1,11 +1,12 @@
 package com.lyloou.seckill.service;
 
 import com.google.common.base.Strings;
-import com.lyloou.component.redismanager.RedisService;
+import com.lyloou.component.exceptionhandler.exception.BizException;
 import com.lyloou.seckill.common.dto.OrderStatus;
 import com.lyloou.seckill.common.dto.PayResultDTO;
 import com.lyloou.seckill.common.repository.entity.OrderEntity;
 import com.lyloou.seckill.common.repository.service.OrderService;
+import com.lyloou.seckill.common.service.StockApiService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,8 +26,7 @@ public class OrderManagerService {
     OrderService orderService;
 
     @Autowired
-    RedisService redisService;
-
+    StockApiService stockApiService;
 
     public void handle(PayResultDTO payResultDTO) {
         final String payNo = payResultDTO.getPayNo();
@@ -38,19 +38,19 @@ public class OrderManagerService {
                 .oneOpt();
         if (!entity.isPresent()) {
             log.warn("无效的订单号：{}，订单信息：{}", orderNo, payResultDTO);
-            return;
+            throw new BizException("无效的订单号：" + orderNo);
         }
 
         // 订单已经支付，不用操作
         final OrderEntity orderEntity = entity.get();
         if (Objects.equals(orderEntity.getOrderStatus(), OrderStatus.PAYED.name())) {
-            log.info("支付已经支付过了，无需操作：{}", orderEntity);
+            log.info("订单已经支付过了，无需操作：{}", orderEntity);
             return;
         }
 
         // 订单已经取消，不用操作
         if (Objects.equals(orderEntity.getOrderStatus(), OrderStatus.CANCEL.name())) {
-            log.warn("支付已经取消：{}", orderEntity);
+            log.warn("订单已经取消：{}", orderEntity);
             return;
         }
 
@@ -65,12 +65,13 @@ public class OrderManagerService {
             }
         }
 
-        // 其他情况，取消订单，恢复库存
+        // 其他情况，设置订单为取消状态，并恢复库存
+        log.info("设置订单为取消状态，并恢复库存，订单号：{}", orderNo);
         orderEntity.setOrderStatus(OrderStatus.CANCEL.name());
         orderService.lambdaUpdate()
                 .eq(OrderEntity::getOrderNo, orderNo)
                 .update(orderEntity);
-        redisService.incr("product::" + 1);
+        stockApiService.incrStock(orderEntity.getProductId());
     }
 
     // 不为空就认为是合法的

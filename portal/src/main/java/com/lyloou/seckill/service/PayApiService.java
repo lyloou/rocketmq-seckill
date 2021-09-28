@@ -94,7 +94,8 @@ public class PayApiService {
         try {
             final String str = JSONUtil.toJsonStr(resultDTO);
             log.info("cancelPayIfTimeout 异步发送：{}", str);
-            payTransactionProducer.asyncSendWithDelayTimeLevel(str, Constant.TOPIC_PAY, 4);
+            // messageDelayLevel = 1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h
+            payTransactionProducer.asyncSendWithDelayTimeLevel(str, Constant.TOPIC_PAY, 10);
         } catch (Exception e) {
             throw new BizException("cancelPayIfTimeout 失败", e);
         }

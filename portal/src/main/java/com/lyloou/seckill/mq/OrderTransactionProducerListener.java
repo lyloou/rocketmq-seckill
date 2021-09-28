@@ -33,7 +33,6 @@ public class OrderTransactionProducerListener implements TransactionListener {
 
     @Override
     public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
-        log.debug("开始执行本地事务......");
         LocalTransactionState state;
 
         final String body = new String(msg.getBody());
@@ -44,7 +43,7 @@ public class OrderTransactionProducerListener implements TransactionListener {
             // redis 分布式锁
             redisService.doWithLock("decr-stock::" + order.getProductId(), 3, locked -> {
                 if (locked) {
-                    orderApiService.order(order, msg.getTransactionId());
+                    orderApiService.doOrder(order);
                 } else {
                     throw new BizException("竞争太激烈了，请重新试试~");
                 }

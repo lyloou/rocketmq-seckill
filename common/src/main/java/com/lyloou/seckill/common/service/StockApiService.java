@@ -1,4 +1,4 @@
-package com.lyloou.seckill.service;
+package com.lyloou.seckill.common.service;
 
 import com.lyloou.component.redismanager.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +34,6 @@ public class StockApiService {
 
     public void incrStock(String productId) {
         productId = "1";
-        redisService.decr("product::" + productId);
+        redisService.incr("product::" + productId);
     }
 }
